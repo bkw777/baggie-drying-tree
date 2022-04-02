@@ -15,8 +15,7 @@
 
 // TODO & ideas
 // * Variant with one-piece hinge bracket. Bores open all the way through top & bottom, bottom hole is smaller. You insert a full stick from the top, pointed end down. Less flexible, but much simpler installation.
-// * spacers or hooks that slip onto the sticks to hang several things on one stick and hold them apart from each other. For things that are flat and hang down, not baggies.
-// * baked-in bed adhesion structure for the arms instead of relying on user slicer settings.
+// * baked-in bed adhesion structure for the arm part instead of relying on user slicer settings.
 // * support rectangular sticks
 
 // stick diameter - Chopsticks: 6 or 5  Skewers: 3
@@ -25,7 +24,7 @@ sd = 6;
 // number of sticks
 ns = 6;
 
-// fitment clearance - Adjust this (not stick diameter) if the sticks are too tight or too loose. Set this so that the sticks fit snugly into the swing arms, and don't quite fit into the hinge end cap brackets. The end caps will always be too tight because of the unsupported overhang inside the pocket. For the hinge, cut or sand a small flat into each end of the stick.
+// fitment clearance - Adjust this if the sticks are too tight or too loose. Set this so that the sticks fit very snugly into the swing arms, and don't quite fit into the hinge end caps. The end caps will always be too tight because of the unsupported overhang inside the pocket. For the hinge, cut or sand a small flat into each end of the stick.
 fc = 0.2;
 
 // wall thickness - around the bores, also wall plate thickness
