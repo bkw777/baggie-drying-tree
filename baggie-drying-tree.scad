@@ -1,40 +1,74 @@
 // reclosable baggie drain & dry hanger
 // Brian K. White - b.kenyon.w@gmail.com
 //
-// Uses chopsticks for both the hangers and the hinge.
-// You want 6mm round style chopsticks. Typical example:
-// https://www.hlybamboo.com/products/bamboo-chopsticks/disposable-bamboo-chopstick/round-bamboo-chopstick/round-bamboo-chopsticks-bulk/
-// You can also use 5mm chopsticks by setting sd=5, or skewers by setting sd=3.
+// Uses chopsticks or skewers for the hangers and the hinge.
+// Supports 6mm round or 5mm round chopsticks, or even 3mm round skewers
+//
+// print 2 bracket() and however many arm() you want
+// print_kit() prints 2 bracket() and 6 arm()
+//
+// bracket() are sized for Command(tm) refill size Small
 //
 // printing notes:
-// * The swing arm parts have very little surface area contacting the bed, and need help staying in place.
-//   You can avoid using a brim by using support:
-//   overhang angle 40, touching build plate only, top Z 0.2mm, Z overrides XY
+// * initial layer expansion -0.2  (counteract elephant's foot)
+// * The swing arm parts have very little contact patch with the bed, and need help staying in place.
+//   Normally you would use a brim, but for this it's useful to keep the bottom edges clean.
+//   You can avoid using a brim by using overhang support instead:
+//     style concentric, 2 walls (you don't need 2 walls for the strength, you need it for the bed contact area)
+//     overhang angle 40  (the part is exactly 45 degrees, and is a cylinder where most of the surface is curved up from there, 40 yeilds a fat wall down the center of the cylinder about 2/3 as wide)
+//     touching build plate only  (you don't want support inside any of the bore holes)
+//     top Z seperation 0.2mm
+//     Z overrides XY
 // * The top few layers are small and need more time to solidify before the next layer.
 //   Set minimum layer time to at least 10 seconds.
+//
+// post-print:
+// * may need to ream out the bottom inside edge of the vertical bore a little to remove a little interior elephant's foot constricting the hole at the bottom surface.
 
 // TODO & ideas
 // * Variant with one-piece hinge bracket. Bores open all the way through top & bottom, bottom hole is smaller. You insert a full stick from the top, pointed end down. Less flexible, but much simpler installation.
 // * baked-in bed adhesion structure for the arm part instead of relying on user slicer settings.
 // * support rectangular sticks
 
-// stick diameter - Chopsticks: 6 or 5  Skewers: 3
+///////////////////////////////////////////////////////////////////////////
+//  OUTPUT
+///////////////////////////////////////////////////////////////////////////
+
+if (part == "kit") print_kit();
+else if (part == "arm") arm();
+else if (part == "bracket") bracket();
+else {
+ print_kit();  // export all the parts for a kit, arranged for printing
+ translate([pl*2,(od+s)*ns,cw/2]) %assembly(); // display all the parts assembled
+ //arm();  // export just an arm
+ //bracket();  // export just a bracket
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+// this is used by Makefile to generate different STL's
+part = "";
+
+// stick diameter - Usually 6, 5, or 3. Chopsticks: 6 or 5  Skewers: 3 - If the sticks are too tight, first look for elephant's foot around the bottom of the vertical bore, scrape it out with xacto knife.
 sd = 6;
 
 // number of sticks
 ns = 6;
 
-// fitment clearance - Adjust this if the sticks are too tight or too loose. Set this so that the sticks fit very snugly into the swing arms, and don't quite fit into the hinge end caps. The end caps will always be too tight because of the unsupported overhang inside the pocket. For the hinge, cut or sand a small flat into each end of the stick.
-fc = 0.2;
-
 // wall thickness - around the bores, also wall plate thickness
 wt = 1;
 
+// fitment clearance - Adjust this if the sticks are too tight or too loose. Set this so that the sticks fit very snugly into the swing arms, and don't quite fit into the hinge end caps. The end caps will always be too tight because of the unsupported overhang inside the pocket. For the hinge, cut or sand a small flat into each end of the stick.
+fc = 0.2;
 
-// stick angle - some math below really only works for values about 32 to 58
-sa = 45+0; // +0 = hide from thingiverse configurator
+// stick angle - 30 to 60
+sa = 45;
+
 // fillet radius - where the hinge meets the wall plate
 fr = 2;
+
+// void seperation - seperate the corners of the angled bore from the floor and the vertical bore
+vs = 0.4;
 
 // Command(tm) strip refills, size small
 //https://www.command.com/3M/en_US/command/products/~/Command-Clear-Small-Refill-Strips/?N=5924736+3294529207+3294737336
@@ -46,20 +80,43 @@ cw = 16;
 cl = 46;
 ct = 0.3+0; // Command(tm) strip thickness
 
+s = 1+0; // part seperation on print bed
 o = 0.01+0; // union/difference overlap/overhang
 $fn = 72+0; // arc smoothness
 
 
-// calculated values
+////////////////////////////////////////////////////////////////////////////////
+// calculated/derived values
+
 id = fc+sd+fc; // id of stick bores
 od = wt+id+wt; // od around stick bores
+//pl = sd*3; // pocket length - length of stick holder tube
 
-// right angle stuff related to the arm od and stick angle
-a = od*sin(sa);
-b = sqrt(od*od-a*a);
-h = (a*b)/od;
-hh = h*2.9; // hinge height - H*2.9 = arms nest and just clear each other
-pl = h*5;   // pocket length - stick pocket depth
+// right-triangles derived from outside diameter and stick angle
+
+// right-triangle for top part of hh and some other things
+// c=od, alpha=sa -> find "a" for top half of hh
+a_od = od*sin(sa); // side "a" (vertical) for od, for top part of hh
+b_od = sqrt(od*od-a_od*a_od); // side "b" (horizontal) for od
+h_od = (a_od*b_od)/od; // hypotenuse for od used a few places later
+
+// complimentary right-triangle for bottom part of hh
+// b=b_od, beta=sa -> find "a" (vertical) for bottom half of hh
+c_od_comp = b_od/sin(sa);
+a_od_comp = sqrt(c_od_comp*c_od_comp-b_od*b_od); // side "a" for bottom part of hh
+// finally, the hinge height - arms stack vertically regardless what angle
+hh = a_od+a_od_comp+fc;
+
+//pl_min = hh/cos(sa);
+//pl_opt = sd*3;
+//pl = (pl_min>pl_opt) ? pl_min : pl_opt;
+pl = sd*3;
+
+// right-triangle derived from inside diameter and stick angle
+// c=id, alpha=sa, -> find a & b
+a_id = id*sin(sa); // side "a" (vertical) for the arm pocket id
+b_id = sqrt(id*id-a_id*a_id); 
+
 
 po_min = od/2+wt+fc; // minimum pin offset - hinge center to wall surface
 // extra pin offset - Extra space between the wall and the hinge. You might want this if you put some kind of knob or T on the ends of the sticks, you can use this to bring the hinge pin out away from the wall to make the sticks parallel with the wall again.
@@ -67,21 +124,9 @@ po_extra = 0;
 po = po_min+po_extra;
 
 
-//  OUTPUT
-///////////////////////////////////////////////////////////////////////////
-
-print_kit();  // export all the parts for a kit, arranged for printing
-translate([pl*2-cw/2,hh*5,cw/2]) %assembly(); // display all the parts assembled
-//arm();  // export just an arm
-//bracket();  // export just a bracket
-
-///////////////////////////////////////////////////////////////////////////
-
-
 module print_kit () {
- s = 1; // part seperation
  y = od+s; // arm spacing
- bx = pl+od/2+cw/2; // brackets x offset
+ bx = pl+od+cw/2; // brackets x offset
  
  for (i=[0:1:ns-1])
   translate([0,y*i,0]) arm();
@@ -108,41 +153,61 @@ module assembly() {
   }
 }
 
+
+// translate the angled cylinders after rotating
+arm_xo = id/2+b_id/2+vs;
+arm_zo = a_id/2+vs;
+
+// lengthen the before-cut angled OD cyl
+// and lower by the same amount before rotating
+// so that the outer cylinder projects below Y=0
+// to give more bed adhesion area for printing, and a neater appearance
+arm_co = sqrt(arm_zo*arm_zo+arm_xo*arm_xo);
+
+// when re-adding the top part of the angled OD cyl after cutting,
+// shorten the cyl and elevate by the sam amount before rotating,
+// so none of the final angled cyl projects below Y=0.
+// Needs to scale with sa or a_od.
+// As the angle increases, the bottom of the cyl needs to move
+// further out to stay above Y=0.
+// But also the top of the bottom end of the cyl must stay below Y=hh.
+aos = a_od*((wt*2)/od);
+
 module arm () {
- x = h-wt; // bottom cut elevation
- translate([0,0,-x])
   difference() {
    union() {
     difference() {
      union() {
       hull() {
-       cylinder(h=pl,d=od); // hinge od before cut
+       translate([0,0,-o])
+        cylinder(h=hh+a_od,d=od); // hinge od before cut
+      translate([arm_xo,0,arm_zo])
        rotate([0,sa,0])
-        translate([0,0,h])
-         cylinder(h=pl,d=od); // arm od before cut
+        translate([0,0,-arm_co])
+         cylinder(h=pl+arm_co,d=od); // arm od before cut
       }
      }
 
      group () {
-      translate([-(o+od+o)/2,-(o+od+o)/2,-h+x])
-       cube([od*2,o+od+o,h]); // arm bottom cut
-      translate([-(o+od+o)/2,-(o+od+o)/2,hh+x])
-       cube([pl*1.5,o+od+o,pl]); // arm top cut
+      translate([-(o+od+o)/2,-(o+od+o)/2,-od])
+       cube([od*2,o+od+o,od]); // arm bottom cut
+      translate([-(o+od+o)/2,-(o+od+o)/2,hh])
+       cube([pl+od+1,o+od+o,od]); // arm top cut
      }
     }
 
-    rotate([0,sa,0])
-     translate([0,0,a+h])
-      cylinder(h=pl-a,d=od); // arm od after cut
+    translate([arm_xo,0,arm_zo])
+     rotate([0,sa,0])
+      translate([0,0,aos])
+       cylinder(h=pl-aos,d=od); // arm od after cut
    }
 
    group() {
-    translate([0,0,x-o])
+    translate([0,0,-o])
      cylinder(h=o+hh+o,d=id); // hinge bore
-
-    rotate([0,sa,0])
-     translate([0,0,od])
-      cylinder(h=pl,d=id); // stick bore
+    translate([arm_xo,0,arm_zo])
+     rotate([0,sa,0])
+      cylinder(h=pl+o,d=id); // stick bore
    }
   }
 }
